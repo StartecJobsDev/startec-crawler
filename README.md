@@ -12,7 +12,7 @@ yarn
 
 ### Create .env file
 
-Create a .env file and configure the values based on the .env.example file.
+Create a .env file and configure the values based on the .env.example file on this repository.
 
 ## Running tests
 
