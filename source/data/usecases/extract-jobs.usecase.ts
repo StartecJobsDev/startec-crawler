@@ -35,7 +35,7 @@ export class ExtractJobsUseCase {
   }
 
   async mapJobs(
-    jobElement: Element,
+    jobElement: any,
     companyProps: JSON,
     $rootUrlHTML: CheerioAPI,
     rootUrl: string
