@@ -14,6 +14,14 @@ yarn
 
 Create a .env file and configure the values based on the .env.example file on this repository.
 
+### Run the API
+
+Finally, run the API using the command below:
+
+```bash
+yarn dev:api
+```
+
 ## Running tests
 
 In order to run the application tests, use the command:
