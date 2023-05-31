@@ -1,6 +1,6 @@
 ## Startec Crawler
 
-The Startec Crawler API is a powerful tool for programmatically crawling and extracting data from web pages. It provides developers with an interface to create custom web crawling applications and automate the process of retrieving information from websites.
+Startec Crawler is a powerful tool for programmatically crawling and extracting data from web pages. It provides developers with an interface to create custom web crawling applications and automate the process of retrieving information from websites.
 
 ### Getting Started
 
@@ -31,6 +31,8 @@ yarn test
 ```
 
 ## API Reference
+
+To access the full API reference, visit [our documentation](https://documenter.getpostman.com/view/21397242/2s93mAV127).
 
 ### Crawling Endpoints
 
