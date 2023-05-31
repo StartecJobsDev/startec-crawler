@@ -2,7 +2,6 @@ import axios from 'axios'
 
 import * as cheerio from 'cheerio'
 import { CheerioAPI } from 'cheerio/lib/load'
-import { Cheerio } from 'cheerio/lib/cheerio'
 import { Job } from '../../domain/models/job'
 import { IExtractJobsDTO } from '../../domain/dto/job'
 import { IHttpResponse } from '../protocols/http-response'
@@ -12,17 +11,13 @@ export class ExtractJobsUseCase {
   async execute(data: IExtractJobsDTO): Promise<IHttpResponse<Job[]>> {
     const jobs: Job[] = []
 
-    // fetch rootUrl
     const $rootUrlHTML = await this.extractUrl(data.rootUrl)
 
-    // get companyProps
     const companyData = $rootUrlHTML('#__NEXT_DATA__').html()
     const companyProps = JSON.parse(companyData)
 
-    // get job elements
     const jobElements = $rootUrlHTML('#job-listing > ul > li')
 
-    // map jobs data
     for (const element of jobElements) {
       const job = await this.mapJobs(
         element,
@@ -33,18 +28,32 @@ export class ExtractJobsUseCase {
       jobs.push(job)
     }
 
-    return HttpResponse.ok('Jobs extracted successfully', jobs)
+    return HttpResponse.ok(
+      `${jobs.length} job${jobs.length > 1 ? 's' : ''} extracted successfully`,
+      jobs
+    )
   }
 
   async mapJobs(
-    jobElement: Element,
+    jobElement: any,
     companyProps: JSON,
     $rootUrlHTML: CheerioAPI,
     rootUrl: string
   ): Promise<Job> {
-    const title = $rootUrlHTML(jobElement)
-      .find('a > div > div.sc-cc6aad61-5.gKFkBn')
-      .text()
+    let url = $rootUrlHTML(jobElement).find('a').attr('href')
+
+    if (url.length > 0 && url.slice(0, 1) === '/') {
+      url = `${rootUrl}${url}`
+    }
+
+    const $jobUrlHTML = await this.extractUrl(url)
+
+    const jobData = $jobUrlHTML('#__NEXT_DATA__').html()
+    const jobProps = JSON.parse(jobData)
+
+    const title = $jobUrlHTML(
+      '#main > div > div.sc-310df1f0-0.eTRPxv > h1'
+    ).text()
 
     const type = $rootUrlHTML(jobElement)
       .find('a > div > div.sc-cc6aad61-7.kOpdJ')
@@ -54,30 +63,11 @@ export class ExtractJobsUseCase {
       .find('a > div > div.sc-cc6aad61-6.bhyeAN')
       .text()
 
-    let url = $rootUrlHTML(jobElement).find('a').attr('href')
-
-    if (url.length > 0 && url.slice(0, 1) === '/') {
-      url = `${rootUrl}${url}`
-    }
-
-    const $jobUrlHTML = await this.extractUrl(url)
-
-    // get jobProps
-    const jobData = $jobUrlHTML('#__NEXT_DATA__').html()
-    const jobProps = JSON.parse(jobData)
-
     const model = $jobUrlHTML(
       '#main > div > div.sc-310df1f0-0.eTRPxv > div.sc-310df1f0-2.sc-310df1f0-3.eaIkLp.lgEIfQ > p:nth-child(2) > span'
     ).text()
 
-    const jobDescriptionElements = $jobUrlHTML(
-      '#main > div > section:nth-child(4) > div'
-    )
-
-    const jobDescription = this.mapJobDescription(
-      jobDescriptionElements,
-      $jobUrlHTML
-    )
+    const jobDescription = this.mapJobDescription($jobUrlHTML)
 
     const job = {
       title,
@@ -97,10 +87,34 @@ export class ExtractJobsUseCase {
     return job
   }
 
-  mapJobDescription(
-    jobDescriptionElements: Cheerio<Element>,
-    $jobUrlHTML: CheerioAPI
-  ): any {
+  mapJobDescription($jobUrlHTML: CheerioAPI): any {
+    const elements = [
+      {
+        label: 'description',
+        value: $jobUrlHTML(
+          'h2[data-testid="section-Descrição da vaga-title"]'
+        ).next('div')
+      },
+      {
+        label: 'attributions',
+        value: $jobUrlHTML(
+          'h2[data-testid="section-Responsabilidades e atribuições-title"]'
+        ).next('div')
+      },
+      {
+        label: 'requirements',
+        value: $jobUrlHTML(
+          'h2[data-testid="section-Requisitos e qualificações-title"]'
+        ).next('div')
+      },
+      {
+        label: 'additional',
+        value: $jobUrlHTML(
+          'h2[data-testid="section-Informações adicionais-title"]'
+        ).next('div')
+      }
+    ]
+
     const jobDescription = {
       description: '',
       attributions: '',
@@ -108,29 +122,16 @@ export class ExtractJobsUseCase {
       additional: ''
     }
 
-    for (let i = 1; i <= jobDescriptionElements.length; i++) {
-      const text = jobDescriptionElements
-        .find(`div:nth-child(${i}) > div`)
-        .contents()
-        .map((_: any, element: any) => $jobUrlHTML(element).text())
-        .get()
-        .join('\n')
+    elements.forEach(el => {
+      const $el = $jobUrlHTML(el.value)
+      $el.find('[style]').removeAttr('style')
+      $el.find('br').remove()
+      $el.find('a').remove()
 
-      switch (i) {
-        case 1:
-          jobDescription.description = text
-          break
-        case 2:
-          jobDescription.attributions = text
-          break
-        case 3:
-          jobDescription.requirements = text
-          break
-        case 4:
-          jobDescription.additional = text
-          break
-      }
-    }
+      const text = $el.html()
+
+      jobDescription[el.label] = text
+    })
 
     return jobDescription
   }
