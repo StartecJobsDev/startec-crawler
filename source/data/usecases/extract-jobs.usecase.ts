@@ -41,6 +41,7 @@ export class ExtractJobsUseCase {
     rootUrl: string
   ): Promise<Job> {
     let url = $rootUrlHTML(jobElement).find('a').attr('href')
+    url = url.replace('?jobBoardSource=gupy_public_page', '')
 
     if (url.length > 0 && url.slice(0, 1) === '/') {
       url = `${rootUrl}${url}`
@@ -127,6 +128,16 @@ export class ExtractJobsUseCase {
       $el.find('[style]').removeAttr('style')
       $el.find('br').remove()
       $el.find('a').remove()
+
+      for (let i = 0; i < 2; i++) {
+        $el.find('*').each((index, el) => {
+          const html = $jobUrlHTML(el).html()
+
+          if (html === '&nbsp;' || html === '') {
+            $el.find(el).remove()
+          }
+        })
+      }
 
       const text = $el.html()
 
